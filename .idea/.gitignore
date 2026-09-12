@@ -1,0 +1,7 @@
+# Файлы, игнорируемые по умолчанию
+/shelf/
+/workspace.xml
+
+target/
+.idea/
+**/dependency-reduced-pom.xml
