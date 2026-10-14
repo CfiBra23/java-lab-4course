@@ -1,6 +1,6 @@
-package FriendlyCodingBrata.reader;
+package friendlycodingbrata.reader;
 
-import FriendlyCodingBrata.entity.Character;
+import friendlycodingbrata.entity.Character;
 
 import java.util.List;
 

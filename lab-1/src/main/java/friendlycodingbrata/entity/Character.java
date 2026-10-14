@@ -1,4 +1,4 @@
-package FriendlyCodingBrata.entity;
+package friendlycodingbrata.entity;
 
 import java.util.Objects;
 

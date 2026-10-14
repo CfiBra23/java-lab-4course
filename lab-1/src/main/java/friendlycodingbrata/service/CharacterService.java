@@ -1,7 +1,8 @@
-package FriendlyCodingBrata.service;
+package friendlycodingbrata.service;
 
-import FriendlyCodingBrata.entity.Character;
+import friendlycodingbrata.entity.Character;
 
+import java.nio.file.Path;
 import java.util.List;
 import java.util.PriorityQueue;
 
@@ -11,5 +12,5 @@ public interface CharacterService {
 
     List<Character> extractTopCharacters(PriorityQueue<Character> characterQueue, int topCount);
 
-    void writeCharactersToFile(List<Character> characters, String destinationPath);
+    void writeCharactersReportToFile(List<Character> characters, Path destinationPath);
 }
