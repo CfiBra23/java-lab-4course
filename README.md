@@ -38,8 +38,6 @@ PriorityQueue — топ-3 по длине имени
 
 # 2-я
 
-# 2-я
-
 ## Условия:
 Вариант 19: `Company: id (int), name (String), employeesCount (int)`
 
