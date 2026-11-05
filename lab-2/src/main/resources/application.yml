@@ -1,0 +1,7 @@
+datasource:
+  url: "jdbc:postgresql://localhost:5432/company_db?currentSchema=company_schema"
+  username: "company_user"
+  password: "company_password"
+  schema: "company_schema"
+  maximum-pool-size: 5
+  connection-timeout-ms: 30000

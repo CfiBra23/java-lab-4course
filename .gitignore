@@ -9,10 +9,17 @@ out/
 target/
 **/target/
 
-# Logs
-*.log
+# Java
+*.class
+hs_err_pid*
+replay_pid*
 
-# OS
+# Logs & Configs
+*.log
+.env
+.env.*
+
+# OS (Windows / macOS)
 .DS_Store
 Thumbs.db
-
+desktop.ini
