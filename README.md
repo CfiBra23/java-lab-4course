@@ -38,5 +38,39 @@ PriorityQueue — топ-3 по длине имени
 
 # 2-я
 
+# 2-я
+
+## Условия:
+Вариант 19: `Company: id (int), name (String), employeesCount (int)`
+
+Поднять PostgreSQL в Docker Compose (без дефолтного `postgres` и `public`). Реализовать CRUD-репозиторий на чистом JDBC с соблюдением идемпотентности всех методов кроме `save`. Подключить пул соединений HikariCP (+5 баллов) и версионирование миграций через Liquibase (+5 баллов).
+
+## Реализация
+
+**infra**
+- `docker-compose.yml` — запуск PostgreSQL 16 в Docker с изолированным пользователем `company_user` и БД `company_db`.
+
+**config**
+- `DatabaseConfig` — парсит `application.yml` через SnakeYAML и инициализирует пул соединений `HikariDataSource` (без `static`-блоков).
+
+**migration**
+- `DatabaseMigrationService` — запуск миграций Liquibase через Java API. В ресурсах лежит `db.changelog-master.xml`, подключающий отдельный ченджсет на создание таблицы `company` в схеме `company_schema`.
+
+**entity**
+- `CompanyEntity` — сущность компании (`id`, `name`, `employeesCount`). Приватные поля, конструкторы, геттеры/сеттеры, `equals`, `hashCode`, `toString`.
+
+**repository**
+- `CompanyRepository` — интерфейс CRUD: `save`, `findById`, `findByName` (поиск по второму полю), `findAll`, `update`, `deleteById`.
+- `CompanyRepositoryJdbc` — JDBC-реализация. Все ресурсы в `try-with-resources`, ошибки логируются через SLF4J и пробрасываются в `RepositoryException` (без дефолтных значений). Все методы кроме `save` строго идемпотентны.
+
+**Main**
+1. Инициализирует конфиг и поднимает пул HikariCP.
+2. Прогоняет миграции Liquibase (создание схемы и таблицы).
+3. Создаёт компании через `save()`.
+4. Демонстрирует чтение: `findById()` и `findByName()` (включая проверку на `null` при отсутствии записи).
+5. Выводит полный список через `findAll()`.
+6. Проверяет `update()` и его идемпотентность (повторный вызов не меняет состояние).
+7. Проверяет `deleteById()` и его идемпотентность (повторное удаление не бросает ошибок).
+8. Закрывает пул `HikariDataSource`.
 
 # 3-я
