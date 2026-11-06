@@ -7,7 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 
-import javax.sql.DataSource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
@@ -56,7 +55,7 @@ public class DatabaseConfig {
         }
     }
 
-    public DataSource createDataSource() {
+    public HikariDataSource createDataSource() {
         log.info("Initializing HikariCP DataSource for URL: {}", url);
         HikariConfig hikariConfig = new HikariConfig();
         hikariConfig.setJdbcUrl(url);

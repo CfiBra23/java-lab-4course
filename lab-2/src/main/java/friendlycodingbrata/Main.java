@@ -9,7 +9,6 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.sql.DataSource;
 import java.util.List;
 
 public class Main {
@@ -20,82 +19,101 @@ public class Main {
         log.info("Starting lab-2 application...");
 
         DatabaseConfig databaseConfig = new DatabaseConfig();
-        DataSource dataSource = databaseConfig.createDataSource();
 
-        try {
-            DatabaseMigrationService migrationService = new DatabaseMigrationService(dataSource);
-            migrationService.runMigrations();
+        // 1. Автоматическое закрытие пула соединений через try-with-resources (без блока finally)
+        try (HikariDataSource dataSource = databaseConfig.createDataSource()) {
+            initDatabase(dataSource);
 
             CompanyRepository companyRepository = new CompanyRepositoryJdbc(dataSource);
 
-            // 1. Демонстрация save
-            log.info("--- 1. save() ---");
-            CompanyEntity firstCompany = new CompanyEntity("VK", 11000);
-            int firstCompanyId = companyRepository.save(firstCompany);
-            log.info("Saved: id={}, entity={}", firstCompanyId, firstCompany);
+            // 2. Логика разделена по методам вместо одного огромного блока кода
+            demonstrateSave(companyRepository);
+            demonstrateFind(companyRepository);
+            demonstrateFindAll(companyRepository);
+            demonstrateUpdate(companyRepository);
+            demonstrateDelete(companyRepository);
+        }
 
-            CompanyEntity secondCompany = new CompanyEntity("Kaspersky", 4500);
-            int secondCompanyId = companyRepository.save(secondCompany);
-            log.info("Saved: id={}, entity={}", secondCompanyId, secondCompany);
+        log.info("Application demonstration finished successfully.");
+    }
 
-            // 2. Демонстрация findById
-            log.info("--- 2. findById() ---");
-            CompanyEntity foundCompany = companyRepository.findById(firstCompanyId);
-            log.info("Found by id {}: {}", firstCompanyId, foundCompany);
+    private static void initDatabase(HikariDataSource dataSource) {
+        DatabaseMigrationService migrationService = new DatabaseMigrationService(dataSource);
+        migrationService.runMigrations();
+    }
 
-            CompanyEntity nonExistentCompany = companyRepository.findById(999999);
-            log.info("Found non-existent id 999999: {}", nonExistentCompany);
+    private static void demonstrateSave(CompanyRepository companyRepository) {
+        log.info("--- 1. save() ---");
+        CompanyEntity firstCompany = new CompanyEntity("VK", 11000);
+        int firstCompanyId = companyRepository.save(firstCompany);
+        log.info("Saved: id={}, entity={}", firstCompanyId, firstCompany);
 
-            // 3. Демонстрация findByName
-            log.info("--- 3. findByName() ---");
-            CompanyEntity foundByName = companyRepository.findByName("Kaspersky");
-            log.info("Found by name 'Kaspersky': {}", foundByName);
+        CompanyEntity secondCompany = new CompanyEntity("Kaspersky", 4500);
+        int secondCompanyId = companyRepository.save(secondCompany);
+        log.info("Saved: id={}, entity={}", secondCompanyId, secondCompany);
+    }
 
-            CompanyEntity nonExistentName = companyRepository.findByName("UnknownLLC");
-            log.info("Found non-existent name 'UnknownLLC': {}", nonExistentName);
+    private static void demonstrateFind(CompanyRepository companyRepository) {
+        log.info("--- 2. findById() & findByName() ---");
+        CompanyEntity foundByName = companyRepository.findByName("Kaspersky");
+        log.info("Found by name 'Kaspersky': {}", foundByName);
 
-            // 4. Демонстрация findAll
-            log.info("--- 4. findAll() ---");
-            List<CompanyEntity> allCompanies = companyRepository.findAll();
-            log.info("Total companies in DB: {}", allCompanies.size());
-            for (CompanyEntity company : allCompanies) {
-                log.info(" - {}", company);
-            }
+        if (foundByName != null) {
+            CompanyEntity foundById = companyRepository.findById(foundByName.getId());
+            log.info("Found by id {}: {}", foundByName.getId(), foundById);
+        }
 
-            // 5. Демонстрация update и идемпотентности
-            log.info("--- 5. update() & idempotency ---");
-            foundCompany.setName("VK Tech");
-            foundCompany.setEmployeesCount(12500);
+        CompanyEntity nonExistentCompany = companyRepository.findById(999999);
+        log.info("Found non-existent id 999999: {}", nonExistentCompany);
 
-            boolean firstUpdate = companyRepository.update(foundCompany);
+        CompanyEntity nonExistentName = companyRepository.findByName("UnknownLLC");
+        log.info("Found non-existent name 'UnknownLLC': {}", nonExistentName);
+    }
+
+    private static void demonstrateFindAll(CompanyRepository companyRepository) {
+        log.info("--- 3. findAll() ---");
+        List<CompanyEntity> allCompanies = companyRepository.findAll();
+        log.info("Total companies in DB: {}", allCompanies.size());
+        for (CompanyEntity company : allCompanies) {
+            log.info(" - {}", company);
+        }
+    }
+
+    private static void demonstrateUpdate(CompanyRepository companyRepository) {
+        log.info("--- 4. update() & idempotency ---");
+        CompanyEntity companyToUpdate = companyRepository.findByName("VK");
+        if (companyToUpdate != null) {
+            companyToUpdate.setName("VK Tech");
+            companyToUpdate.setEmployeesCount(12500);
+
+            boolean firstUpdate = companyRepository.update(companyToUpdate);
             log.info("First update result: {}", firstUpdate);
 
-            // Повторный вызов не меняет состояние БД после первого раза
-            boolean secondUpdate = companyRepository.update(foundCompany);
+            // Идемпотентность: повторный вызов с теми же данными не меняет состояние
+            boolean secondUpdate = companyRepository.update(companyToUpdate);
             log.info("Second (idempotent) update result: {}", secondUpdate);
+        }
 
-            CompanyEntity fakeCompany = new CompanyEntity(999999, "FakeCompany", 1);
-            boolean fakeUpdate = companyRepository.update(fakeCompany);
-            log.info("Update non-existent company result: {}", fakeUpdate);
+        CompanyEntity fakeCompany = new CompanyEntity(999999, "FakeCompany", 1);
+        boolean fakeUpdate = companyRepository.update(fakeCompany);
+        log.info("Update non-existent company result: {}", fakeUpdate);
+    }
 
-            // 6. Демонстрация deleteById и идемпотентности
-            log.info("--- 6. deleteById() & idempotency ---");
-            companyRepository.deleteById(secondCompanyId);
-            log.info("Deleted company id: {}", secondCompanyId);
+    private static void demonstrateDelete(CompanyRepository companyRepository) {
+        log.info("--- 5. deleteById() & idempotency ---");
+        CompanyEntity companyToDelete = companyRepository.findByName("Kaspersky");
+        if (companyToDelete != null) {
+            int targetId = companyToDelete.getId();
 
-            CompanyEntity verifyDeleted = companyRepository.findById(secondCompanyId);
-            log.info("Verify deletion for id {}: {}", secondCompanyId, verifyDeleted);
+            companyRepository.deleteById(targetId);
+            log.info("Deleted company id: {}", targetId);
 
-            // Повторное удаление того же id не должно выбрасывать исключений
-            companyRepository.deleteById(secondCompanyId);
-            log.info("Second (idempotent) deleteById({}) succeeded without errors.", secondCompanyId);
+            CompanyEntity verifyDeleted = companyRepository.findById(targetId);
+            log.info("Verify deletion for id {}: {}", targetId, verifyDeleted);
 
-            log.info("All operations demonstrated successfully.");
-        } finally {
-            if (dataSource instanceof HikariDataSource hikariDataSource) {
-                hikariDataSource.close();
-                log.info("HikariCP connection pool closed.");
-            }
+            // Идемпотентность: повторный вызов deleteById для удаленной записи безопасен
+            companyRepository.deleteById(targetId);
+            log.info("Second (idempotent) deleteById({}) succeeded without errors.", targetId);
         }
     }
 }
